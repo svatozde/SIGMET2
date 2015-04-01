@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <string name="app_name">SIGMET</string>
+    <string name="title_section1">MAP</string>
+    <string name="title_section2">GRAPH</string>
+    <string name="title_section3">CELL LIST</string>
+    <string name="title_section4">LOG</string>
+    <string name="show_signal">S</string>
+    <string name="show_handovers">H </string>
+    <string name="show_signal_heat_map">M</string>
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+    <string name="all">A</string>
+    <string name="action_settings">Settings</string>
+    <string name="export_graph">Export csv</string>
+    
+    
+    <string-array name="cell_list_menu">
+        <item>Detail</item>
+        <item>Show on map</item>
+    </string-array>
+
+</resources>

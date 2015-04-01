@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:layout_gravity="left|bottom"
+    android:orientation="horizontal" >
+
+    <ToggleButton 
+        android:id="@+id/show_signal"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="left"
+        android:layout_marginTop="20dp"
+        android:padding="7dp"
+        android:paddingRight="7dp"
+        android:textSize="12sp"
+        android:textOn="@string/show_signal"
+        android:textOff="@string/show_signal" />
+
+    <ToggleButton 
+        android:id="@+id/show_handovers"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="left"
+        android:layout_marginTop="20dp"
+        android:padding="7dp"
+        android:paddingRight="7dp"
+        android:textSize="12sp"
+        android:textOn="@string/show_handovers"
+        android:textOff="@string/show_handovers" />
+
+    <ToggleButton 
+        android:id="@+id/show_signal_heatmap"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="left"
+        android:layout_marginTop="20dp"
+        android:padding="7dp"
+        android:paddingRight="7dp"
+        android:textSize="12sp"
+        android:textOn="@string/show_signal_heat_map"
+        android:textOff="@string/show_signal_heat_map" />
+
+    <ToggleButton 
+         android:id="@+id/show_all"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="left"
+        android:layout_marginTop="20dp"
+        android:padding="7dp"
+        android:paddingRight="7dp"
+        android:textSize="12sp"
+        android:textOn="@string/all" 
+        android:textOff="@string/all"/>
+
+</LinearLayout>
