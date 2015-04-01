@@ -366,7 +366,7 @@ public class HeatmapTileProvider implements TileProvider {
 
         // calculate width of one tile, given there are 2 ^ zoom tiles in that zoom level
         // In terms of world width units
-        double tileWidth = WORLD_WIDTH / Math.pow(2, Math.min(zoom,10));
+        double tileWidth = WORLD_WIDTH / Math.pow(2, zoom);
 
         // how much padding to include in search
         // is to tileWidth as mRadius (padding in terms of pixels) is to TILE_DIM
