@@ -98,7 +98,7 @@ public class GSMGRaphFragment extends Fragment implements SigmetDataListener, On
 	                new DecimalFormat("#####"));
 		plot.getGraphWidget().setDomainValueFormat(
 	                new DecimalFormat("#####.#"));
-		plot.getGraphWidget().setRangeLabelWidth(25);
+		plot.getGraphWidget().setRangeLabelWidth(20);
 		plot.setRangeLabel("");
 		plot.setDomainLabel("");
 

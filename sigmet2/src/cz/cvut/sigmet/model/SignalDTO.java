@@ -11,7 +11,7 @@ public class SignalDTO {
 	//this value enables us to reconstruct walk with all measured signals
 	//in case walk recording is notenbaled this value is null
 	@DatabaseField(foreign = true, foreignAutoRefresh = false, canBeNull=true)
-	private WalkDTO measure;	
+	private WalkDTO walk;	
 	@DatabaseField
 	private double latitude;
 	@DatabaseField
@@ -63,5 +63,13 @@ public class SignalDTO {
 	}
 	public void setCell(CellDTO id) {
 		this.cell = id;
+	}
+
+	public WalkDTO getWalk() {
+		return walk;
+	}
+
+	public void setWalk(WalkDTO walk) {
+		this.walk = walk;
 	}
 }

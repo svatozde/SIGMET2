@@ -3,11 +3,11 @@ package cz.cvut.sigmet.model;
 import com.j256.ormlite.field.DatabaseField;
 import com.j256.ormlite.table.DatabaseTable;
 
-@DatabaseTable(tableName="handover")
+@DatabaseTable(tableName = "handover")
 public class HandoverDTO {
-	@DatabaseField(foreign = true, foreignAutoRefresh = false)
-	private CellDTO from;	
-	@DatabaseField(foreign = true, foreignAutoRefresh = false)
+	@DatabaseField(foreign = true, foreignAutoRefresh = true)
+	private CellDTO from;
+	@DatabaseField(foreign = true, foreignAutoRefresh = true)
 	private CellDTO to;
 	@DatabaseField
 	private double latitude;
@@ -15,11 +15,13 @@ public class HandoverDTO {
 	private double longtitude;
 	@DatabaseField
 	private long timestamp;
-	
+	@DatabaseField(foreign = true, foreignAutoRefresh = false, canBeNull = true)
+	private WalkDTO walk;
+
 	public HandoverDTO() {
 		// needed by ormlite
 	}
-	
+
 	public HandoverDTO(CellDTO from, CellDTO to, double latitude, double longtitude, long timestamp) {
 		super();
 		this.from = from;
@@ -68,7 +70,13 @@ public class HandoverDTO {
 	public void setTimestamp(long timestamp) {
 		this.timestamp = timestamp;
 	}
-	
-	
-	
+
+	public WalkDTO getWalk() {
+		return walk;
+	}
+
+	public void setWalk(WalkDTO walk) {
+		this.walk = walk;
+	}
+
 }

@@ -4,6 +4,25 @@
     android:layout_height="match_parent"
     android:orientation="vertical" >
 
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal" >
+        <Spinner
+            android:id="@+id/search_spinner"
+            android:layout_width="wrap_content"
+            android:layout_height="fill_parent"
+            android:entries="@array/search_spinner"
+            android:spinnerMode="dropdown" />
+
+        <EditText
+            android:id="@+id/cellSearch"
+            android:layout_width="fill_parent"
+            android:layout_height="wrap_content"
+            android:hint="@string/search_hint"
+            android:inputType="text" />
+    </LinearLayout>
+
     <ListView
         android:id="@android:id/list"
         android:layout_width="wrap_content"

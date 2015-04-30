@@ -1,11 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+	<string name="connection_off">Interent connection is not available. Aplication SIGMET cann not work properly with internet connetion off</string>
+	<string name="gps_off">GPS is not available. Application SIGMET cannot </string>
     <string name="app_name">SIGMET</string>
-    <string name="title_section1">MAP</string>
-    <string name="title_section2">GRAPH</string>
-    <string name="title_section3">CELL LIST</string>
-    <string name="title_section4">LOG</string>
     <string name="show_signal">S</string>
     <string name="show_handovers">H </string>
     <string name="show_signal_heat_map">M</string>
@@ -14,11 +11,31 @@
     <string name="all">A</string>
     <string name="action_settings">Settings</string>
     <string name="export_graph">Export csv</string>
-    
-    
-    <string-array name="cell_list_menu">
-        <item>Detail</item>
+    <string name="search_hint">Searbox defaultly search all the valuesin cells only thing youhave to do is type whatever you want to see.</string>
+    <string name="start_walk">START</string>
+    <string name="stop_walk">STOP</string>
+    <string name="show_walk">show on map</string>
+    <string name="delete_walk">delete</string>
+    <string name="export_csv_walk">export csv</string>
+    <string name="export_xml_walk">export_xml</string>
+
+    <string-array name="walk_list_menu">
         <item>Show on map</item>
+        <item>Delete</item>
+    </string-array>
+    <string-array name="search_spinner">
+        <item>all</item>
+        <item>cid</item>
+        <item>lac</item>
+        <item>add</item>
+    </string-array>
+    
+    <string-array name="menu_items">
+        <item>MAP</item>
+        <item>GRAPH</item>
+        <item>CELL LIST</item>
+        <item>WALKS</item>
+        <item>LOG</item>
     </string-array>
 
 </resources>

@@ -1,23 +1,20 @@
 package cz.cvut.sigmet.dbUtils;
 
+import android.content.Context;
+import android.database.SQLException;
+import android.database.sqlite.SQLiteDatabase;
+import android.util.Log;
+
 import com.j256.ormlite.android.apptools.OrmLiteSqliteOpenHelper;
-import com.j256.ormlite.dao.Dao;
 import com.j256.ormlite.dao.RuntimeExceptionDao;
 import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.table.TableUtils;
 
-import cz.cvut.sigmet.MAPKA;
 import cz.cvut.sigmet.model.CellDTO;
+import cz.cvut.sigmet.model.CellWalkDTO;
 import cz.cvut.sigmet.model.HandoverDTO;
-import cz.cvut.sigmet.model.MeasureDTO;
 import cz.cvut.sigmet.model.SignalDTO;
 import cz.cvut.sigmet.model.WalkDTO;
-
-import android.content.Context;
-import android.database.SQLException;
-import android.database.sqlite.SQLiteDatabase;
-import android.database.sqlite.SQLiteDatabase.CursorFactory;
-import android.util.Log;
 
 public class SigmetSqlHelper extends OrmLiteSqliteOpenHelper  {
 
@@ -30,6 +27,10 @@ public class SigmetSqlHelper extends OrmLiteSqliteOpenHelper  {
 	private RuntimeExceptionDao<SignalDTO, Integer> signalDao = null;
 
 	private RuntimeExceptionDao<HandoverDTO, Integer> handoverDao = null;
+	
+	private RuntimeExceptionDao<WalkDTO, Integer> walkDao = null;
+	
+	private RuntimeExceptionDao<CellWalkDTO, Integer> cellWalkDao = null;
 
 	public SigmetSqlHelper(Context context) {
 		super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -37,18 +38,8 @@ public class SigmetSqlHelper extends OrmLiteSqliteOpenHelper  {
 	@Override
 	public void onUpgrade(SQLiteDatabase arg0, ConnectionSource arg1, int arg2, int arg3) {
 		try {
-			Log.i(SigmetSqlHelper.class.getName(), "*** DATABASE UPGRADE ***");
-			TableUtils.dropTable(connectionSource, CellDTO.class, true);
-			TableUtils.dropTable(connectionSource, SignalDTO.class, true);
-			TableUtils.dropTable(connectionSource,  HandoverDTO.class, true);
-			TableUtils.dropTable(connectionSource,  WalkDTO.class, true);
-			TableUtils.dropTable(connectionSource,  MeasureDTO.class, true);
-			
-			TableUtils.createTable(connectionSource, CellDTO.class);
-			TableUtils.createTable(connectionSource, SignalDTO.class);
-			TableUtils.createTable(connectionSource, HandoverDTO.class);
-			TableUtils.createTable(connectionSource,  WalkDTO.class);
-			TableUtils.createTable(connectionSource,  MeasureDTO.class);
+			Log.i(SigmetSqlHelper.class.getName(), "*** DATABASE UPGRADE ***");		
+			createTables();
 		} catch (SQLException e) {
 			Log.e(SigmetSqlHelper.class.getName(), "Can't create database", e);
 			throw new RuntimeException(e);
@@ -63,18 +54,8 @@ public class SigmetSqlHelper extends OrmLiteSqliteOpenHelper  {
 	public void onCreate(SQLiteDatabase db, ConnectionSource cs) {
 
 		try {
-			Log.i(SigmetSqlHelper.class.getName(), "*** DATABASE CREATE ***");
-			TableUtils.dropTable(connectionSource, CellDTO.class, true);
-			TableUtils.dropTable(connectionSource, SignalDTO.class, true);
-			TableUtils.dropTable(connectionSource,  HandoverDTO.class, true);
-			TableUtils.dropTable(connectionSource,  WalkDTO.class, true);
-			TableUtils.dropTable(connectionSource,  MeasureDTO.class, true);
-			
-			TableUtils.createTable(connectionSource, CellDTO.class);
-			TableUtils.createTable(connectionSource, SignalDTO.class);
-			TableUtils.createTable(connectionSource, HandoverDTO.class);
-			TableUtils.createTable(connectionSource,  WalkDTO.class);
-			TableUtils.createTable(connectionSource,  MeasureDTO.class);
+			Log.i(SigmetSqlHelper.class.getName(), "*** DATABASE CREATE ***");	
+			createTables();
 		} catch (SQLException e) {
 			Log.e(SigmetSqlHelper.class.getName(), "Can't create database", e);
 			throw new RuntimeException(e);
@@ -82,6 +63,15 @@ public class SigmetSqlHelper extends OrmLiteSqliteOpenHelper  {
 			Log.e(SigmetSqlHelper.class.getName(), "Can't create database", e);
 			throw new RuntimeException(e);
 		}
+	}
+	
+	
+	private void createTables() throws java.sql.SQLException{
+		TableUtils.createTable(connectionSource, CellDTO.class);
+		TableUtils.createTable(connectionSource, SignalDTO.class);
+		TableUtils.createTable(connectionSource, HandoverDTO.class);
+		TableUtils.createTable(connectionSource,  WalkDTO.class);
+		TableUtils.createTable(connectionSource,  CellWalkDTO.class);
 	}
 
 	@Override
@@ -122,6 +112,20 @@ public class SigmetSqlHelper extends OrmLiteSqliteOpenHelper  {
 		return handoverDao;
 	}
 	
+	
+	public RuntimeExceptionDao<WalkDTO, Integer> getWalkDao(){
+		if(walkDao == null){
+			return  getRuntimeExceptionDao(WalkDTO.class);
+		}
+		return walkDao;
+	}
+	
+	public RuntimeExceptionDao<CellWalkDTO, Integer> getCellWalkDao(){
+		if(cellWalkDao == null){
+			return  getRuntimeExceptionDao(CellWalkDTO.class);
+		}
+		return cellWalkDao;
+	}
 	
 	
 
