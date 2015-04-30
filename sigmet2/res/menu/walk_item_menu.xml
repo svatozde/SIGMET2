@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android" >
+
+    <item
+        android:id="@+id/walk_show"
+        android:title="@string/show_walk"/>
+    
+     <item
+        android:id="@+id/walk_export_csv"
+        android:title="@string/export_csv_walk"/>
+    <item
+        android:id="@+id/walk_export_xml"
+        android:title="@string/export_xml_walk"/>
+    <item
+        android:id="@+id/walk_delete"
+        android:title="@string/delete_walk"/>
+  
+
+</menu>
