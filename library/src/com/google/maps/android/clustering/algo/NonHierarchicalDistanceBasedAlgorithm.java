@@ -71,11 +71,31 @@ public class NonHierarchicalDistanceBasedAlgorithm<T extends ClusterItem> implem
 
     @Override
     public void removeItem(T item) {
-    	  final QuadItem<T> quadItem = new QuadItem<T>(item);
-    	    synchronized (mQuadTree) {
-    	        mItems.remove(quadItem);
-    	        mQuadTree.remove(quadItem);
-    	    }
+    	final Collection<QuadItem<T>> items = new ArrayList<QuadItem<T>>();
+        final PointQuadTree<QuadItem<T>> quadTree = new PointQuadTree<QuadItem<T>>(0, 1, 0, 1);
+
+        for (QuadItem<T> temp : mItems)
+        {
+            if (item.getPosition() != temp.getPosition())
+            {
+                synchronized (quadTree)
+                {
+                    items.add(temp);
+                    quadTree.add(temp);
+                }
+            }
+        }
+
+        clearItems();
+
+        for (QuadItem<T> temp : items)
+        {
+            synchronized (mQuadTree)
+            {
+                mItems.add(temp);
+                mQuadTree.add(temp);
+            }
+        }
     }
 
     @Override
