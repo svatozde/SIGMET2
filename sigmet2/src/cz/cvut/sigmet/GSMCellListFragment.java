@@ -24,6 +24,7 @@ import android.widget.Filter;
 import android.widget.Spinner;
 import android.widget.TextView;
 import cz.cvut.sigmet.dbUtils.SigmetDataListener;
+import cz.cvut.sigmet.dbUtils.SigmetLogger;
 import cz.cvut.sigmet.model.CellDTO;
 import cz.cvut.sigmet.model.SignalDTO;
 
@@ -35,7 +36,7 @@ public class GSMCellListFragment extends ListFragment implements SigmetDataListe
 
 	private Spinner searchSpinner;
 
-	private CellArrayAdapter cellAdapter = new CellArrayAdapter(MAPKA.ctx, R.layout.cell_list_item, new ArrayList<CellDTO>());
+	private CellArrayAdapter cellAdapter = new CellArrayAdapter(SigmetActivity.ctx, R.layout.cell_list_item, new ArrayList<CellDTO>());
 
 	private int search_type = 0;
 
@@ -109,9 +110,8 @@ public class GSMCellListFragment extends ListFragment implements SigmetDataListe
 
 	@Override
 	public void onCellChange(CellDTO dto) {
-		if (getListAdapter() != null) {
+		if (getListAdapter() != null && !cells.contains(dto)) {
 			((CellArrayAdapter) getListAdapter()).add(dto);
-			cells.add(dto);
 		}
 
 	}
@@ -120,9 +120,9 @@ public class GSMCellListFragment extends ListFragment implements SigmetDataListe
 		@Override
 		protected List<CellDTO> doInBackground(Void... params) {
 			try {
-				return MAPKA.dataManager.getAllCells();
+				return SigmetActivity.dataManager.getAllCells();
 			} catch (SQLException e) {
-				e.printStackTrace();
+				SigmetLogger.error(e.getMessage());
 			}
 
 			return Collections.<CellDTO> emptyList();

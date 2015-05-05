@@ -56,7 +56,7 @@ public class GsmWebManagerImpl implements GsmWebManager {
 				return g;
 			}
 		}
-		throw new Exception("NO LAC CODE FIND");
+		throw new Exception("NO CID OR LAC CODE FIND");
 	}
 
 	// TODO EXCEPITON MAPPINGS

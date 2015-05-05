@@ -2,8 +2,6 @@ package cz.cvut.sigmet.dbUtils;
 
 import static cz.cvut.sigmet.dbUtils.SigmetSignalUtils.*;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
@@ -24,17 +22,21 @@ import android.telephony.gsm.GsmCellLocation;
 import com.google.android.gms.maps.model.LatLng;
 import com.j256.ormlite.dao.GenericRawResults;
 import com.j256.ormlite.stmt.QueryBuilder;
+import com.j256.ormlite.stmt.UpdateBuilder;
 
 import cz.cvut.sigmet.gsmWebUtils.GsmWebManager;
 import cz.cvut.sigmet.gsmWebUtils.GsmWebManagerImpl;
 import cz.cvut.sigmet.model.CellDTO;
-import cz.cvut.sigmet.model.CellWalkDTO;
 import cz.cvut.sigmet.model.HandoverDTO;
 import cz.cvut.sigmet.model.SignalDTO;
 import cz.cvut.sigmet.model.WalkDTO;
 
 public class SigmetDataManager extends PhoneStateListener implements LocationListener {
 
+	private final static  String  GSM_MESSAGE= "Connect to c: %s l: %s from web.";
+	private final static  String  WALK_START_MESSAGE= "Walk %s started";
+	private final static  String  WALK_STOP_MESSAGE= "Walk %s stopped";
+    private static  String DB_MESSAGE = "Connect to c: %s l: %s from DB.";
 	private GsmWebManager webMgr = new GsmWebManagerImpl();
 
 	protected Set<SigmetDataListener> listenres = new HashSet<SigmetDataListener>();
@@ -54,7 +56,6 @@ public class SigmetDataManager extends PhoneStateListener implements LocationLis
 
 	public List<CellDTO> getAllCells() throws SQLException {
 		// getInconsistence();
-
 		QueryBuilder<CellDTO, Integer> qb = helper.getCellDao().queryBuilder();
 		qb.orderBy("addres", true);
 		List<CellDTO> cells = helper.getCellDao().query(qb.prepare());
@@ -63,6 +64,7 @@ public class SigmetDataManager extends PhoneStateListener implements LocationLis
 
 	public List<SignalDTO> getAllSignal() throws SQLException {
 		QueryBuilder<SignalDTO, Integer> qb = helper.getSignalDao().queryBuilder();
+		qb.where().isNotNull("walk_id");
 		List<SignalDTO> signals = helper.getSignalDao().query(qb.prepare());
 		return signals;
 	}
@@ -72,15 +74,17 @@ public class SigmetDataManager extends PhoneStateListener implements LocationLis
 		qb.where().eq("cid", cid).and().eq("lac", lac);
 		List<CellDTO> cells = helper.getCellDao().query(qb.prepare());
 
+	
 		CellDTO ret = null;
 		if (cells == null || cells.isEmpty()) {
 			ret = webMgr.getGsmInfo(cid, lac);
 			helper.getCellDao().create(ret);
+			SigmetLogger.info(GSM_MESSAGE, cid, lac);
 		} else {
 			ret = cells.get(0);
+			SigmetLogger.info(DB_MESSAGE, cid, lac);
 		}
-
-		createMeasure(ret);
+		
 
 		if (actual != null && !actual.equals(ret) && actual_location != null) {
 			HandoverDTO handover = new HandoverDTO(actual, ret, actual_location.getLatitude(), actual_location.getLongitude(), System.currentTimeMillis());
@@ -97,24 +101,7 @@ public class SigmetDataManager extends PhoneStateListener implements LocationLis
 
 	}
 
-	private void createMeasure(CellDTO dto) throws SQLException {
-		if (actual_walk != null) {
-			if (dto.getId() != 0) {
-				QueryBuilder<CellWalkDTO, Integer> qb = helper.getCellWalkDao().queryBuilder();
-				qb.where().eq("cell_id", Integer.valueOf(dto.getId())).and().eq("walk_id", actual_walk.getId());
-				List<CellWalkDTO> cells = helper.getCellWalkDao().query(qb.prepare());
-				if (cells != null && !cells.isEmpty()) {
-					return;
-				}
-			}
-
-			CellWalkDTO m = new CellWalkDTO();
-			m.setWalk(actual_walk);
-			m.setCell(dto);
-			helper.getCellWalkDao().create(m);
-		}
-	}
-
+	
 	public SignalDTO addSignalStrength(int strength) throws Exception {
 		if (actual_location != null && helper.getSignalDao() != null) {
 			SignalDTO s = new SignalDTO(actual, actual_location.getLatitude(), actual_location.getLongitude(), strength, System.currentTimeMillis());
@@ -147,6 +134,8 @@ public class SigmetDataManager extends PhoneStateListener implements LocationLis
 		qb.orderBy("timestamp", true);
 		return helper.getSignalDao().query(qb.prepare());
 	}
+	
+	
 
 	public List<HandoverDTO> getHandovers(LatLng cell) throws Exception {
 		Cursor dbCursor = helper.getReadableDatabase().query("handover", null, null, null, null, null, null);
@@ -173,6 +162,18 @@ public class SigmetDataManager extends PhoneStateListener implements LocationLis
 		qb.where().eq("to", cell);
 		return helper.getHandoverDao().query(qb.prepare());
 	}
+	
+	public List<HandoverDTO> getHandoversForWalk(WalkDTO walk) throws Exception {
+		QueryBuilder<HandoverDTO, Integer> qb = helper.getHandoverDao().queryBuilder();
+		qb.where().eq("walk_id", walk.getId());
+		return helper.getHandoverDao().query(qb.prepare());
+	}
+	
+	public List<SignalDTO> getSignalsForWalk(WalkDTO walk) throws Exception {
+		QueryBuilder<SignalDTO, Integer> qb = helper.getSignalDao().queryBuilder();
+		qb.where().eq("walk_id", walk.getId());
+		return helper.getSignalDao().query(qb.prepare());
+	}
 
 	@Override
 	public void onLocationChanged(Location location) {
@@ -190,8 +191,7 @@ public class SigmetDataManager extends PhoneStateListener implements LocationLis
 				}
 			}
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			SigmetLogger.error(e.getMessage());
 		}
 	}
 
@@ -252,20 +252,32 @@ public class SigmetDataManager extends PhoneStateListener implements LocationLis
 		dto.setName(name);
 		dto.setStart(new Date().getTime());
 		helper.getWalkDao().create(dto);
-		createMeasure(actual);
 		actual_walk = dto;
+		SigmetLogger.info(WALK_START_MESSAGE, name);
 	}
 
 	public void stopWalk() {
 		if (actual_walk != null) {
 			actual_walk.setStop(new Date().getTime());
 			helper.getWalkDao().update(actual_walk);
+			SigmetLogger.info(WALK_STOP_MESSAGE, actual_walk.getName());
 			actual_walk = null;
+			
 		}
 	}
 	
-	public void deleteWalk(WalkDTO walk){
-		helper.getWalkDao().delete(walk);
+	public void deleteWalk(WalkDTO walk) throws SQLException{
+		UpdateBuilder<SignalDTO, Integer> sUpdate = helper.getSignalDao().updateBuilder();
+		sUpdate.where().eq("walk_id", walk);
+		sUpdate.updateColumnValue("walk_id", null);
+		sUpdate.update();
+		
+		UpdateBuilder<HandoverDTO, Integer> hUpdate = helper.getHandoverDao().updateBuilder();
+		hUpdate.where().eq("walk_id", walk);
+		hUpdate.updateColumnValue("walk_id", null);
+		hUpdate.update();
+		
+		helper.getWalkDao().deleteById(walk.getId());
 	}
 
 	@Override
@@ -294,6 +306,10 @@ public class SigmetDataManager extends PhoneStateListener implements LocationLis
 			l.onCellChange(actual);
 		}
 	}
+	
+	public CellDTO getActual() {
+		return actual;
+	}
 
 	// //////////////////////////////////////////////////////////
 	// //////// UNUSED METHODS ////////////
@@ -314,10 +330,6 @@ public class SigmetDataManager extends PhoneStateListener implements LocationLis
 	public void onProviderDisabled(String provider) {
 		// TODO Auto-generated method stub
 
-	}
-
-	public CellDTO getActual() {
-		return actual;
 	}
 
 }

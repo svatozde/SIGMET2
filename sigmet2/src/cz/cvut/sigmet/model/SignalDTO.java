@@ -12,6 +12,8 @@ public class SignalDTO {
 	//in case walk recording is notenbaled this value is null
 	@DatabaseField(foreign = true, foreignAutoRefresh = false, canBeNull=true)
 	private WalkDTO walk;	
+	@DatabaseField(foreign = true, foreignAutoRefresh = false, canBeNull=false)
+	private LocationDTO location;
 	@DatabaseField
 	private double latitude;
 	@DatabaseField
@@ -71,5 +73,19 @@ public class SignalDTO {
 
 	public void setWalk(WalkDTO walk) {
 		this.walk = walk;
+	}
+
+	@Override
+	public String toString() {
+		return "SignalDTO [cell=" + cell + ", walk=" + walk + ", latitude=" + latitude + ", longtitude=" + longtitude + ", value=" + value + ", timestamp="
+				+ timestamp + "]";
+	}
+
+	public LocationDTO getLocation() {
+		return location;
+	}
+
+	public void setLocation(LocationDTO location) {
+		this.location = location;
 	}
 }

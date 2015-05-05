@@ -41,6 +41,7 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 import cz.cvut.sigmet.dbUtils.SigmetDataListener;
+import cz.cvut.sigmet.dbUtils.SigmetLogger;
 import cz.cvut.sigmet.model.CellDTO;
 import cz.cvut.sigmet.model.SignalDTO;
 import cz.cvut.sigmet.model.WalkDTO;
@@ -51,7 +52,7 @@ public class GSMWalksListFragment extends ListFragment {
 
 	private EditText etSearch;
 
-	private CellArrayAdapter cellAdapter = new CellArrayAdapter(MAPKA.ctx, R.layout.walk_list_item, new ArrayList<WalkDTO>());
+	private CellArrayAdapter cellAdapter = new CellArrayAdapter(SigmetActivity.ctx, R.layout.walk_list_item, new ArrayList<WalkDTO>());
 
 	public GSMWalksListFragment() {
 	}
@@ -62,6 +63,8 @@ public class GSMWalksListFragment extends ListFragment {
 		new GetAllCells().execute((Void) null);
 		setListAdapter(cellAdapter);
 	}
+	
+	
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
@@ -88,20 +91,15 @@ public class GSMWalksListFragment extends ListFragment {
 		return view;
 	}
 
-	@Override
-	public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
-		// TODO Auto-generated method stub
-		super.onCreateContextMenu(menu, v, menuInfo);
-	}
 	
 	private class GetAllCells extends AsyncTask<Void, Void, List<WalkDTO>> {
 
 		@Override
 		protected List<WalkDTO> doInBackground(Void... params) {
 			try {
-				return MAPKA.dataManager.getAllWalks();
+				return SigmetActivity.dataManager.getAllWalks();
 			} catch (SQLException e) {
-				e.printStackTrace();
+				SigmetLogger.error(e.getMessage());
 			}
 
 			return Collections.<WalkDTO> emptyList();
@@ -150,7 +148,7 @@ public class GSMWalksListFragment extends ListFragment {
 	
 				@Override
 				public boolean onLongClick(View v) {
-					PopupMenu pop = new PopupMenu(MAPKA.ctx, rowView);
+					PopupMenu pop = new PopupMenu(SigmetActivity.ctx, rowView);
 					pop.getMenuInflater().inflate(R.menu.walk_item_menu, pop.getMenu());  
 					pop.setOnMenuItemClickListener(new OnMenuItemClickListener() {
 						
@@ -159,9 +157,10 @@ public class GSMWalksListFragment extends ListFragment {
 							switch (item.getItemId()) {
 							case R.id.walk_show:
 								FragmentManager f = getFragmentManager();
-								MAPKA.setCurrent_position(0);
-								f.beginTransaction().replace(R.id.container, MAPKA.map_fragment).commit();
-								MAPKA.map_fragment.drawWalk(walk);
+								//magic ocnstat to recognize that the map is curently se as main view
+								SigmetActivity.setCurrent_position(5);
+								f.beginTransaction().replace(R.id.container, SigmetActivity.walk_browse_fragment).commit();
+								SigmetActivity.walk_browse_fragment.drawWalk(walk);
 								break;
 							case R.id.walk_delete:
 								delete(walk);
@@ -189,13 +188,18 @@ public class GSMWalksListFragment extends ListFragment {
 			        switch (which){
 			        case DialogInterface.BUTTON_POSITIVE:
 			        	cellAdapter.remove(walk);
-			        	MAPKA.dataManager.deleteWalk(walk);
+			        	cells.remove(walk);
+			        	try {
+							SigmetActivity.dataManager.deleteWalk(walk);
+						} catch (SQLException e) {
+							SigmetLogger.error(e.getMessage());
+						}
 			            break;
 			        }
 			    }
 			};
 
-			AlertDialog.Builder builder = new AlertDialog.Builder(MAPKA.ctx);
+			AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
 			builder.setMessage("Do you want to delete " + walk.getName()).setPositiveButton("Yes", dialogClickListener)
 			    .setNegativeButton("No", dialogClickListener).setCancelable(true).show();
 		}

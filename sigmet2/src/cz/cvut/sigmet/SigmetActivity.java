@@ -3,7 +3,6 @@ package cz.cvut.sigmet;
 import java.sql.SQLException;
 
 import android.app.ActionBar;
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Fragment;
 import android.app.FragmentManager;
@@ -29,23 +28,23 @@ import android.widget.EditText;
 import android.widget.Toast;
 import android.text.InputType;
 
-import com.google.maps.android.projection.SphericalMercatorProjection;
 import com.j256.ormlite.android.apptools.OrmLiteBaseActivity;
 
 import cz.cvut.sigmet.dbUtils.SigmetDataManager;
+import cz.cvut.sigmet.dbUtils.SigmetLogger;
 import cz.cvut.sigmet.dbUtils.SigmetSqlHelper;
 
-public class MAPKA extends OrmLiteBaseActivity<SigmetSqlHelper> implements NavigationDrawerFragment.NavigationDrawerCallbacks {
-	
-	private NavigationDrawerFragment mNavigationDrawerFragment;
+public class SigmetActivity extends OrmLiteBaseActivity<SigmetSqlHelper> implements NavigationDrawerFragment.NavigationDrawerCallbacks {
 
-	private CharSequence mTitle;
+	private NavigationDrawerFragment mNavigationDrawerFragment;
 
 	public static Context ctx;
 
 	public static SigmetDataManager dataManager;
 
 	public static GSMMapFragment map_fragment;
+	
+	public static GSMMapFragment walk_browse_fragment;
 
 	public static GSMGRaphFragment graph_fragment;
 
@@ -53,11 +52,13 @@ public class MAPKA extends OrmLiteBaseActivity<SigmetSqlHelper> implements Navig
 
 	public static GSMWalksListFragment walk_fragment;
 
+	public static LogFragment log_fragment;
+
 	private static int current_position = 0;
 
 	private static final int MIN_TIME = 2500;
 
-	public static final int MIN_DISTANCE = 15;
+	public static final int MIN_DISTANCE = 40;
 
 	private boolean isWalkStarted = false;
 
@@ -67,7 +68,7 @@ public class MAPKA extends OrmLiteBaseActivity<SigmetSqlHelper> implements Navig
 		// this has to be set up before content view
 		getWindow().requestFeature(Window.FEATURE_ACTION_BAR);
 		ctx = getApplicationContext();
-		
+
 		getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
 		initManager();
@@ -75,17 +76,34 @@ public class MAPKA extends OrmLiteBaseActivity<SigmetSqlHelper> implements Navig
 		setContentView(R.layout.activity_main);
 
 		mNavigationDrawerFragment = (NavigationDrawerFragment) getFragmentManager().findFragmentById(R.id.navigation_drawer);
-		mTitle = getTitle();
 
 		mNavigationDrawerFragment.setUp(R.id.navigation_drawer, (DrawerLayout) findViewById(R.id.drawer_layout));
+
 		
+	}
+	
+	@Override
+	protected void onStart() {
 		if (!isNetworkAvailable()) {
-			Toast.makeText(ctx, R.string.connection_off, 2);
+			SigmetLogger.warn("Imtermet is mot available");
+			Toast tg = Toast.makeText(ctx, R.string.connection_off, 2);
+			tg.setDuration(Toast.LENGTH_LONG);
+			tg.show();
 		}
-		
-		if(!isGpsOn()){
-			Toast.makeText(ctx, R.string.gps_off, 2);
+
+		if (!isGpsOn()) {
+			SigmetLogger.warn("GPS is mot available");
+			Toast tg = Toast.makeText(ctx, R.string.gps_off, 2);
+			tg.setDuration(Toast.LENGTH_LONG);
+			tg.show();
 		}
+
+		super.onStart();
+	}
+
+	@Override
+	protected void onResume() {
+		super.onResume();
 	}
 
 	public boolean isNetworkAvailable() {
@@ -108,24 +126,30 @@ public class MAPKA extends OrmLiteBaseActivity<SigmetSqlHelper> implements Navig
 			}
 			if (map_fragment == null) {
 				map_fragment = new GSMMapFragment();
+				dataManager.addDataListener(map_fragment);
 			}
 			// this has to be set up before content view
 			if (graph_fragment == null) {
 				graph_fragment = new GSMGRaphFragment();
+				dataManager.addDataListener(graph_fragment);
 
 			}
 			if (list_fragment == null) {
 				list_fragment = new GSMCellListFragment();
+				dataManager.addDataListener(list_fragment);
 			}
 			if (walk_fragment == null) {
 				walk_fragment = new GSMWalksListFragment();
 			}
+			if (log_fragment == null) {
+				log_fragment = new LogFragment();
+				SigmetLogger.addAppender(log_fragment);
+			}
+			if(walk_browse_fragment == null){
+				walk_browse_fragment = new GSMMapFragment();
+			}
 
 		}
-
-		dataManager.addDataListener(graph_fragment);
-		dataManager.addDataListener(map_fragment);
-		dataManager.addDataListener(list_fragment);
 
 		LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
 		locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, MIN_TIME, MIN_DISTANCE, dataManager);
@@ -135,12 +159,12 @@ public class MAPKA extends OrmLiteBaseActivity<SigmetSqlHelper> implements Navig
 		// initial call
 		dataManager.onCellLocationChanged(tm.getCellLocation());
 		String provider = locationManager.getBestProvider(new Criteria(), true);
-		if(isGpsOn()){
+		if (isGpsOn()) {
 			dataManager.setActual_location(locationManager.getLastKnownLocation(provider));
 		}
 
 	}
-	
+
 	@Override
 	protected void onStop() {
 		dataManager.stopWalk();
@@ -151,7 +175,6 @@ public class MAPKA extends OrmLiteBaseActivity<SigmetSqlHelper> implements Navig
 	public void onNavigationDrawerItemSelected(int position) {
 		// update the main content by replacing fragments
 		FragmentManager fragmentManager = getFragmentManager();
-		current_position = position;
 		switch (position) {
 		case 0:
 			fragmentManager.beginTransaction().replace(R.id.container, map_fragment).commit();
@@ -166,12 +189,12 @@ public class MAPKA extends OrmLiteBaseActivity<SigmetSqlHelper> implements Navig
 			fragmentManager.beginTransaction().replace(R.id.container, walk_fragment).commit();
 			break;
 		case 4:
-			fragmentManager.beginTransaction().replace(R.id.container, PlaceholderFragment.newInstance(4)).commit();
+			fragmentManager.beginTransaction().replace(R.id.container, log_fragment).commit();
 			break;
 		}
-
+		current_position = position;
 	}
-	
+
 	public void restoreActionBar() {
 		ActionBar actionBar = getActionBar();
 		actionBar.setNavigationMode(ActionBar.NAVIGATION_MODE_STANDARD);
@@ -194,13 +217,7 @@ public class MAPKA extends OrmLiteBaseActivity<SigmetSqlHelper> implements Navig
 				getMenuInflater().inflate(R.menu.map_menu, menu);
 				setupMapMenu(menu);
 				break;
-			case 1:
-				getMenuInflater().inflate(R.menu.empty_menu, menu);
-				break;
-			case 2:
-				getMenuInflater().inflate(R.menu.empty_menu, menu);
-				break;
-			case 3:
+			default:
 				getMenuInflater().inflate(R.menu.empty_menu, menu);
 				break;
 			}
@@ -259,7 +276,7 @@ public class MAPKA extends OrmLiteBaseActivity<SigmetSqlHelper> implements Navig
 					dataManager.startWalk(name);
 					map_fragment.startWalk();
 				} catch (SQLException e) {
-					e.printStackTrace();
+					SigmetLogger.error(e.getMessage());
 				}
 
 			}
@@ -282,7 +299,7 @@ public class MAPKA extends OrmLiteBaseActivity<SigmetSqlHelper> implements Navig
 	}
 
 	private void stopWalk() {
-		MAPKA.dataManager.stopWalk();
+		SigmetActivity.dataManager.stopWalk();
 		isWalkStarted = false;
 	}
 
@@ -335,7 +352,7 @@ public class MAPKA extends OrmLiteBaseActivity<SigmetSqlHelper> implements Navig
 	}
 
 	public static void setCurrent_position(int current_position) {
-		MAPKA.current_position = current_position;
+		SigmetActivity.current_position = current_position;
 	}
 
 }

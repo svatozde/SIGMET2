@@ -3,12 +3,20 @@ package cz.cvut.sigmet;
 import static cz.cvut.sigmet.dbUtils.SigmetSignalUtils.getSignalByReflection;
 
 import java.text.DecimalFormat;
+import java.text.FieldPosition;
+import java.text.Format;
+import java.text.ParsePosition;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
 import android.app.Fragment;
 import android.graphics.Color;
 import android.graphics.PointF;
+import android.graphics.Shader;
 import android.os.Bundle;
 import android.telephony.PhoneStateListener;
 import android.telephony.SignalStrength;
@@ -27,6 +35,7 @@ import com.androidplot.xy.PointLabeler;
 import com.androidplot.xy.SimpleXYSeries;
 import com.androidplot.xy.XYPlot;
 import com.androidplot.xy.XYSeries;
+import com.androidplot.xy.XYStepMode;
 
 import cz.cvut.sigmet.dbUtils.SigmetDataListener;
 import cz.cvut.sigmet.model.CellDTO;
@@ -35,6 +44,8 @@ import cz.cvut.sigmet.model.SignalDTO;
 public class GSMGRaphFragment extends Fragment implements SigmetDataListener, OnTouchListener {
 
 	private XYPlot plot;
+	
+	private List<Long> dbm_time_values = new ArrayList<Long>();
 
 	private SimpleXYSeries dbm = new SimpleXYSeries("dbm");
 
@@ -78,57 +89,92 @@ public class GSMGRaphFragment extends Fragment implements SigmetDataListener, On
 	};
 
 	public GSMGRaphFragment() {
+		timer.scheduleAtFixedRate(new FeedGraph(), 0, PERIOD);
 	}
 
 	@Override
 	public void onCreate(Bundle savedInstanceState) {
+
 		super.onCreate(savedInstanceState);
 	}
 
 	@Override
 	public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
 		View rootView = inflater.inflate(R.layout.fragment_graph, container, false);
+		rootView.setBackgroundColor(Color.WHITE);
 		plot = (XYPlot) rootView.findViewById(R.id.graph);
 
 		plot.setOnTouchListener(this);
-		plot.getGraphWidget().setTicksPerRangeLabel(2);
-		plot.getGraphWidget().setTicksPerDomainLabel(2);
-		plot.getGraphWidget().getBackgroundPaint().setColor(Color.TRANSPARENT);
-		plot.getGraphWidget().setRangeValueFormat(
-	                new DecimalFormat("#####"));
-		plot.getGraphWidget().setDomainValueFormat(
-	                new DecimalFormat("#####.#"));
+		plot.getGraphWidget().setTicksPerDomainLabel(3);
+		plot.getGraphWidget().getBackgroundPaint().setColor(Color.WHITE);
+		plot.getGraphWidget().setRangeValueFormat(new DecimalFormat("#####"));
 		plot.getGraphWidget().setRangeLabelWidth(20);
-		plot.setRangeLabel("");
-		plot.setDomainLabel("");
+		plot.setBackgroundColor(Color.TRANSPARENT);
+		plot.getBackgroundPaint().setColor(Color.TRANSPARENT);
 
-		plot.setBorderStyle(BorderStyle.NONE, null, null);
-	       
-	 
+		plot.getGraphWidget().getBackgroundPaint().setColor(Color.WHITE);
+		plot.getGraphWidget().getGridBackgroundPaint().setColor(Color.WHITE);
+
+		plot.getGraphWidget().getDomainLabelPaint().setColor(Color.BLACK);
+		plot.getGraphWidget().getRangeLabelPaint().setColor(Color.BLACK);
+
+		plot.getGraphWidget().getDomainOriginLabelPaint().setColor(Color.BLACK);
+		plot.getGraphWidget().getDomainOriginLinePaint().setColor(Color.BLACK);
+		plot.getGraphWidget().getRangeOriginLinePaint().setColor(Color.BLACK);
+
+		plot.setBackgroundColor(Color.WHITE);
+		plot.getBackgroundPaint().setColor(Color.WHITE);
+		plot.getBorderPaint().setColor(Color.WHITE);
+		plot.getBackground().setVisible(false, false);
+
+		plot.setRangeStep(XYStepMode.INCREMENT_BY_VAL, 30);
+		plot.setRangeBoundaries(-120, 30, BoundaryMode.FIXED);
+		plot.setTicksPerRangeLabel(1);
+		plot.getGraphWidget().setRangeLabelTickExtension(5);
 		
-		// thin out domain tick labels so they dont overlap each other:
-//		plot.setDomainStepMode(XYStepMode.INCREMENT_BY_VAL);
-//		plot.setDomainStepValue(5);
-//
-//		plot.setRangeStepMode(XYStepMode.INCREMENT_BY_VAL);
-//		plot.setRangeStepValue(10);
 		
-	    plot.setRangeBoundaries(-120, 30, BoundaryMode.FIXED);
+		plot.setKeepScreenOn(true);
 
-		int line_clr = Color.rgb(0, 200, 0);
-		int pint_clr = Color.rgb(0, 100, 0);
+		plot.getLayoutManager().remove(plot.getLegendWidget());
+		plot.getLayoutManager().remove(plot.getDomainLabelWidget());
+		plot.getLayoutManager().remove(plot.getRangeLabelWidget());
+		plot.getLayoutManager().remove(plot.getTitleWidget());
+		
+		plot.getGraphWidget().setMarginLeft(10);
+		
+		plot.setDomainValueFormat(new Format() {
+			
+			private static final long serialVersionUID = 1L;
+			private SimpleDateFormat dateFormat = new SimpleDateFormat("HH:mm:ss.SSS");
+			
+			@Override
+			public Object parseObject(String string, ParsePosition position) {
+				return null;
+			}
+			
+			@Override
+			public StringBuffer format(Object object, StringBuffer buffer, FieldPosition field) {
+				Integer timestamp = ((Number) object).intValue();
+                Date date = new Date(dbm_time_values.get(timestamp));
+                return dateFormat.format(date, buffer, field);
+			}
+		});
 
-		PointLabelFormatter dbmPointLabel = new PointLabelFormatter(Color.WHITE);
+		int line_clr = Color.BLACK;
+		int pint_clr = Color.DKGRAY;
+
+		PointLabelFormatter dbmPointLabel = new PointLabelFormatter(Color.BLACK);
 
 		dbmFormater = new LineAndPointFormatter(line_clr, pint_clr, null, dbmPointLabel);
+		dbmFormater.getLinePaint().setStrokeWidth(4);
+		dbmFormater.getVertexPaint().setStrokeWidth(7);
+		
 		dbm.useImplicitXVals();
 
 		plot.addSeries(dbm, dbmFormater);
-
 		plot.setOnTouchListener(this);
-
-		timer.scheduleAtFixedRate(new FeedGraph(), 0, PERIOD);
-
+		minXY = new PointF(plot.getCalculatedMinX().floatValue(), plot.getCalculatedMinY().floatValue());
+		maxXY = new PointF(plot.getCalculatedMaxX().floatValue(), plot.getCalculatedMaxY().floatValue());
 		return rootView;
 	}
 
@@ -152,10 +198,16 @@ public class GSMGRaphFragment extends Fragment implements SigmetDataListener, On
 
 	private class FeedGraph extends TimerTask {
 		public void run() {
+			if(currentSignal == null){
+				return;
+			}
 			dbm.addLast(null, getSignalByReflection(currentSignal));
-			plot.redraw();
-			minXY = new PointF(plot.getCalculatedMinX().floatValue(), plot.getCalculatedMinY().floatValue());
-			maxXY = new PointF(plot.getCalculatedMaxX().floatValue(), plot.getCalculatedMaxY().floatValue());
+			dbm_time_values.add(System.currentTimeMillis());
+			if (plot != null) {
+				plot.redraw();
+				minXY = new PointF(plot.getCalculatedMinX().floatValue(), plot.getCalculatedMinY().floatValue());
+				maxXY = new PointF(plot.getCalculatedMaxX().floatValue(), plot.getCalculatedMaxY().floatValue());
+			}
 		}
 	}
 
@@ -178,13 +230,14 @@ public class GSMGRaphFragment extends Fragment implements SigmetDataListener, On
 			}
 			break;
 		case MotionEvent.ACTION_MOVE:
-			float stopScroll_right = dbm.getX(dbm.size() -1 ).floatValue();
+			float stopScroll_right = dbm.getX(dbm.size() - 1).floatValue();
 			float stopScroll_left = dbm.getX(0).floatValue();
 			if (mode == ONE_FINGER_DRAG) {
 				PointF oldFirstFinger = firstFinger;
 				firstFinger = new PointF(event.getX(), event.getY());
 				scroll(oldFirstFinger.x - firstFinger.x);
-				if(stopScroll_right<maxXY.x && stopScroll_left > minXY.x);
+				if (stopScroll_right < maxXY.x && stopScroll_left > minXY.x)
+					;
 				plot.setDomainBoundaries(minXY.x, maxXY.x, BoundaryMode.FIXED);
 				plot.redraw();
 
@@ -217,7 +270,7 @@ public class GSMGRaphFragment extends Fragment implements SigmetDataListener, On
 		clampToDomainBounds(domainSpan);
 	}
 
-	private void scroll(float pan) {	
+	private void scroll(float pan) {
 		float domainSpan = maxXY.x - minXY.x;
 		float step = domainSpan / plot.getWidth();
 		float offset = pan * step;

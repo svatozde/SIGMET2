@@ -7,7 +7,7 @@ import com.j256.ormlite.table.DatabaseTable;
 
 @DatabaseTable(tableName = "walks")
 public class WalkDTO {
-	@DatabaseField(generatedId = true)
+	@DatabaseField(generatedIdSequence = "walk_id_seq")
 	private int id;
 		
 	@DatabaseField
@@ -75,6 +75,11 @@ public class WalkDTO {
 
 	public void setSignals(ForeignCollection<SignalDTO> signals) {
 		this.signals = signals;
+	}
+
+	@Override
+	public String toString() {
+		return "WalkDTO [id=" + id + ", name=" + name + ", start=" + start + ", stop=" + stop + "]";
 	}
 
 }

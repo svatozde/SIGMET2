@@ -18,6 +18,7 @@
     <string name="delete_walk">delete</string>
     <string name="export_csv_walk">export csv</string>
     <string name="export_xml_walk">export_xml</string>
+   
 
     <string-array name="walk_list_menu">
         <item>Show on map</item>

@@ -10,8 +10,9 @@
             android:layout_height="fill_parent"
             android:layout_marginLeft="0dp"
             android:layout_marginRight="0dp"
-            android:layout_marginTop="5dp"
-            androidPlot.graphWidget.gridLinePaint.color="#000000" />
+            android:layout_marginTop="0dp"
+            android:background="#FFFFFFFF"
+            androidPlot.graphWidget.gridLinePaint.color="#000000"/>
 	  
 	  
 </LinearLayout>

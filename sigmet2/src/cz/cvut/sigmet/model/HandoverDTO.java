@@ -79,4 +79,10 @@ public class HandoverDTO {
 		this.walk = walk;
 	}
 
+	@Override
+	public String toString() {
+		return "HandoverDTO [from=" + from + ", to=" + to + ", latitude=" + latitude + ", longtitude=" + longtitude + ", timestamp=" + timestamp + ", walk="
+				+ walk + "]";
+	}
+
 }

@@ -11,7 +11,6 @@ import com.j256.ormlite.support.ConnectionSource;
 import com.j256.ormlite.table.TableUtils;
 
 import cz.cvut.sigmet.model.CellDTO;
-import cz.cvut.sigmet.model.CellWalkDTO;
 import cz.cvut.sigmet.model.HandoverDTO;
 import cz.cvut.sigmet.model.SignalDTO;
 import cz.cvut.sigmet.model.WalkDTO;
@@ -30,8 +29,6 @@ public class SigmetSqlHelper extends OrmLiteSqliteOpenHelper  {
 	
 	private RuntimeExceptionDao<WalkDTO, Integer> walkDao = null;
 	
-	private RuntimeExceptionDao<CellWalkDTO, Integer> cellWalkDao = null;
-
 	public SigmetSqlHelper(Context context) {
 		super(context, DATABASE_NAME, null, DATABASE_VERSION);
 	}
@@ -71,7 +68,6 @@ public class SigmetSqlHelper extends OrmLiteSqliteOpenHelper  {
 		TableUtils.createTable(connectionSource, SignalDTO.class);
 		TableUtils.createTable(connectionSource, HandoverDTO.class);
 		TableUtils.createTable(connectionSource,  WalkDTO.class);
-		TableUtils.createTable(connectionSource,  CellWalkDTO.class);
 	}
 
 	@Override
@@ -80,7 +76,7 @@ public class SigmetSqlHelper extends OrmLiteSqliteOpenHelper  {
 		cellDao = null;
 		signalDao = null;
 		handoverDao = null;
-		
+		walkDao = null;		
 	}
 	
 	@Override
@@ -89,11 +85,14 @@ public class SigmetSqlHelper extends OrmLiteSqliteOpenHelper  {
 		cellDao = null;
 		signalDao = null;
 		handoverDao = null;
+		walkDao = null;	
 	}
 	
+	
 	public RuntimeExceptionDao<CellDTO, Integer> getCellDao(){
+		
 		if(cellDao == null){
-			return  getRuntimeExceptionDao(CellDTO.class);
+			cellDao =  getRuntimeExceptionDao(CellDTO.class);
 		}
 		return cellDao;
 	}
@@ -107,7 +106,7 @@ public class SigmetSqlHelper extends OrmLiteSqliteOpenHelper  {
 	
 	public RuntimeExceptionDao<HandoverDTO, Integer> getHandoverDao(){
 		if(handoverDao == null){
-			return  getRuntimeExceptionDao(HandoverDTO.class);
+			handoverDao =  getRuntimeExceptionDao(HandoverDTO.class);
 		}
 		return handoverDao;
 	}
@@ -115,19 +114,9 @@ public class SigmetSqlHelper extends OrmLiteSqliteOpenHelper  {
 	
 	public RuntimeExceptionDao<WalkDTO, Integer> getWalkDao(){
 		if(walkDao == null){
-			return  getRuntimeExceptionDao(WalkDTO.class);
+			walkDao =  getRuntimeExceptionDao(WalkDTO.class);
 		}
 		return walkDao;
 	}
 	
-	public RuntimeExceptionDao<CellWalkDTO, Integer> getCellWalkDao(){
-		if(cellWalkDao == null){
-			return  getRuntimeExceptionDao(CellWalkDTO.class);
-		}
-		return cellWalkDao;
-	}
-	
-	
-
-
 }

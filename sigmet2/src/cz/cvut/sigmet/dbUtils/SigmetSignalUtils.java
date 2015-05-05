@@ -14,20 +14,15 @@ public class SigmetSignalUtils {
 			Integer o = (Integer) m.invoke(s);
 			return o;
 		} catch (NoSuchMethodException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			SigmetLogger.error(e.getMessage());
 		} catch (ClassNotFoundException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			SigmetLogger.error(e.getMessage());
 		} catch (IllegalArgumentException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			SigmetLogger.error(e.getMessage());
 		} catch (IllegalAccessException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			SigmetLogger.error(e.getMessage());
 		} catch (InvocationTargetException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			SigmetLogger.error(e.getMessage());
 		}
 		
 		
