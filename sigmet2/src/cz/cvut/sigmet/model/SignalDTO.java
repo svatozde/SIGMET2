@@ -12,15 +12,17 @@ public class SignalDTO {
 	//in case walk recording is notenbaled this value is null
 	@DatabaseField(foreign = true, foreignAutoRefresh = false, canBeNull=true)
 	private WalkDTO walk;	
-	@DatabaseField(foreign = true, foreignAutoRefresh = false, canBeNull=false)
-	private LocationDTO location;
+	@DatabaseField(canBeNull=true)
+	private String location_id;
+	@DatabaseField
+	private String geohash;
 	@DatabaseField
 	private double latitude;
 	@DatabaseField
 	private double longtitude;
 	@DatabaseField
 	private int value;
-	@DatabaseField
+	@DatabaseField(id=true)
 	private long timestamp;
 	
 
@@ -81,11 +83,20 @@ public class SignalDTO {
 				+ timestamp + "]";
 	}
 
-	public LocationDTO getLocation() {
-		return location;
+	public String getLocation() {
+		return location_id;
 	}
 
-	public void setLocation(LocationDTO location) {
-		this.location = location;
+	public void setLocation(String location) {
+		this.location_id = location;
 	}
+
+	public String getGeohash() {
+		return geohash;
+	}
+
+	public void setGeohash(String geohash) {
+		this.geohash = geohash;
+	}
+
 }

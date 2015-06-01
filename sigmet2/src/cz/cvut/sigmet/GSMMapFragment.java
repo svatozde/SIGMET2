@@ -16,6 +16,7 @@ import android.graphics.Color;
 import android.location.Location;
 import android.os.AsyncTask;
 import android.os.Bundle;
+import android.service.wallpaper.WallpaperService;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -24,6 +25,9 @@ import android.widget.CompoundButton.OnCheckedChangeListener;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 import android.widget.ToggleButton;
+
+import ch.hsr.geohash.GeoHash;
+import ch.hsr.geohash.WGS84Point;
 
 import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
@@ -37,6 +41,8 @@ import com.google.android.gms.maps.model.CircleOptions;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.LatLngBounds;
 import com.google.android.gms.maps.model.Marker;
+import com.google.android.gms.maps.model.Polygon;
+import com.google.android.gms.maps.model.PolygonOptions;
 import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
 import com.google.android.gms.maps.model.TileOverlay;
@@ -53,6 +59,7 @@ import cz.cvut.sigmet.dbUtils.SigmetDataListener;
 import cz.cvut.sigmet.dbUtils.SigmetLogger;
 import cz.cvut.sigmet.model.CellDTO;
 import cz.cvut.sigmet.model.HandoverDTO;
+import cz.cvut.sigmet.model.LocationDTO;
 import cz.cvut.sigmet.model.SignalDTO;
 import cz.cvut.sigmet.model.WalkDTO;
 
@@ -75,7 +82,7 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 
 	private Set<Polyline> walk_handover_lines = new HashSet<Polyline>();
 
-	private Set<Circle> show_signal = new HashSet<Circle>();
+	private Set<Polygon> show_signal = new HashSet<Polygon>();
 
 	private Set<Circle> handovers_lines = new HashSet<Circle>();
 
@@ -85,7 +92,7 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 
 	private CameraPosition cp;
 
-	private int[] colors = { Color.rgb(255, 0, 0), Color.rgb(0, 225, 0) };
+	private int[] colors = { Color.rgb(255, 0, 0), Color.rgb(0, 255, 0) };
 
 	private float[] startPoints = { 0.01f, 1f };
 
@@ -93,12 +100,12 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 
 	private TileOverlay heat_map;
 
-	private TileOverlayOptions tO;
+
 
 	// Declare a variable for the cluster manager.
 	private ClusterManager<GSMLocationObject> mClusterManager;
 
-	private static final int CLUSTERING_DISTANCE = 40;
+	private static final int SINGLE_CELL_GEOHASH_PRECIZION = 32;
 
 	private Location currentLoc;
 
@@ -150,13 +157,9 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 			@Override
 			public void onCheckedChanged(CompoundButton buttonView, boolean isChecked) {
 				if (isChecked) {
-					if (tO == null) {
-						drawSignalMap();
-					} else {
-
-					}
+					drawSignalMap();
 				} else {
-					heat_map.setVisible(false);
+					heat_map.remove();
 				}
 
 			}
@@ -216,10 +219,6 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 		H.setChecked(false);
 		M.setChecked(false);
 
-		if(tO!=null){
-			heat_map = getMap().addTileOverlay(tO);
-		}
-		
 		mClusterManager.cluster();
 		for (SignalDTO s : current_signals.keySet()) {
 			current_signals.put(s, drawSingleSignal(s));
@@ -253,7 +252,7 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 	}
 
 	@Override
-	public void onLocationCange(SignalDTO dto) {
+	public void onLocationCange(final SignalDTO dto) {
 		if (getMap() != null) {
 			Circle c = drawSingleSignal(dto);
 			current_signals.put(dto, c);
@@ -261,6 +260,28 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 			current_signals.put(dto, null);
 		}
 	};
+	
+
+	private Polygon drawLocation(LocationDTO loc){
+		GeoHash g = GeoHash.fromBinaryString(loc.getGeohash());
+		double maxLat = g.getBoundingBox().getMaxLat();
+		double minLat = g.getBoundingBox().getMinLat();
+		double maxLng = g.getBoundingBox().getMaxLon();
+		double minLng = g.getBoundingBox().getMinLon();
+		return drawRectangle(getMap(), maxLat, minLat, maxLng, minLng, 1, getColorBaseOnSignal(loc.getAvg()));
+	}
+	
+	private Polygon drawRectangle(GoogleMap googleMap, double maxLat, double minLat, double maxLng, double minLng,int zindex,int color) {
+		PolygonOptions po = new PolygonOptions().add(new LatLng(maxLat, maxLng)).add(new LatLng(maxLat, minLng)).add(new LatLng(minLat, minLng))
+				.add(new LatLng(minLat, maxLng)).add(new LatLng(maxLat, maxLng));
+		
+		po.fillColor(color);
+		po.strokeWidth(0);
+		po.strokeColor(Color.TRANSPARENT);
+		po.zIndex(zindex);
+
+		return googleMap.addPolygon(po);
+	}
 
 	private CircleOptions getCircleOptions(SignalDTO dto) {
 		int color = getColorBaseOnSignal(dto.getValue());
@@ -310,7 +331,7 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 
 	}
 
-	private static final int opacity = 50;
+	private static final int opacity = 128;
 	private static final int MAX_NEGATIVE_DBM = 120;
 
 	public int getColorBaseOnSignal(double i) {
@@ -325,7 +346,7 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 		} else if (i > -90) {
 			return Color.argb(opacity, 255, 204, 0);
 		} else if (i > -100) {
-			return Color.argb(opacity, 255, 102, 0);
+			return Color.argb(opacity, 255, 0, 0);
 		} else {
 			return Color.argb(opacity, 255, 0, 0);
 		}
@@ -398,6 +419,7 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 						return SigmetActivity.dataManager.getAllCells();
 					} catch (SQLException e) {
 						SigmetLogger.error(e.getMessage());
+						cancel(true);
 					}
 					return Collections.emptyList();
 				}
@@ -412,7 +434,7 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 					mClusterManager.cluster();
 				}
 			};
-			getAll.execute(null, null);
+			getAll.execute((Void) null);
 		}
 	}
 
@@ -422,13 +444,12 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 
 			@Override
 			protected List<HandoverDTO> doInBackground(WalkDTO... params) {
-				// TODO Auto-generated method stub
 				try {
 					return SigmetActivity.dataManager.getHandoversForWalk(walk);
 				} catch (Exception e) {
 					SigmetLogger.error(e.getMessage());
+					cancel(true);
 				}
-
 				return Collections.emptyList();
 			}
 
@@ -446,11 +467,11 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 
 			@Override
 			protected List<SignalDTO> doInBackground(WalkDTO... params) {
-				// TODO Auto-generated method stub
 				try {
 					return SigmetActivity.dataManager.getSignalsForWalk(walk);
 				} catch (Exception e) {
 					SigmetLogger.error(e.getLocalizedMessage());
+					cancel(true);
 				}
 				return Collections.emptyList();
 			}
@@ -474,7 +495,6 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 				M.setVisibility(View.GONE);
 				S.setVisibility(View.GONE);
 				A.setVisibility(View.GONE);
-				
 
 				drawWalkHandowers.execute(walk);
 				drawWalkSignals.execute(walk);
@@ -484,9 +504,6 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 	}
 
 	private void recalculateCameraPosision() {
-		if(getMap() == null){
-			return;
-		}
 		if (mClusterManager.getMarkerCollection().getMarkers().isEmpty()) {
 			return;
 		}
@@ -498,18 +515,30 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 			builder.include(new LatLng(currentLoc.getLatitude(), currentLoc.getLongitude()));
 		}
 		LatLngBounds bounds = builder.build();
-		CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, 20);
-		getMap().animateCamera(cu);
+		final CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, 20);
+		getMapAsync(new OnMapReadyCallback() {
+
+			@Override
+			public void onMapReady(GoogleMap googleMap) {
+				googleMap.animateCamera(cu);
+			}
+		});
 	}
 
 	private void recalculateCameraForWalk() {
-		LatLngBounds.Builder builder = new LatLngBounds.Builder();
-		for (CellDTO marker : walk_cells) {
-			builder.include(new LatLng(marker.getLatitude(), marker.getLongtitude()));
-		}
-		LatLngBounds bounds = builder.build();
-		CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, 30);
-		getMap().animateCamera(cu, 700, null);
+		getMapAsync(new OnMapReadyCallback() {
+			@Override
+			public void onMapReady(GoogleMap googleMap) {
+				LatLngBounds.Builder builder = new LatLngBounds.Builder();
+				for (CellDTO marker : walk_cells) {
+					builder.include(new LatLng(marker.getLatitude(), marker.getLongtitude()));
+				}
+				LatLngBounds bounds = builder.build();
+				CameraUpdate cu = CameraUpdateFactory.newLatLngBounds(bounds, 30);
+				googleMap.animateCamera(cu, 700, null);
+				
+			}
+		});
 	}
 
 	private void removeNonCurentCells() {
@@ -521,13 +550,9 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 	}
 
 	private void drawSignalMap() {
-		if (tO != null) {
-			heat_map = getMap().addTileOverlay(tO);
-		} else {
 			M.setEnabled(false);
 			DrawAllSignal action = new DrawAllSignal();
 			action.execute((Void) null);
-		}
 	}
 
 	private void drawSignal(GSMLocationObject cell) {
@@ -539,7 +564,7 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 	}
 
 	private void removeNonCurrentSignal() {
-		removeCircle(show_signal);
+		removePolygon(show_signal);
 	}
 
 	private void removeHandovers() {
@@ -555,6 +580,14 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 
 	}
 
+	private void removePolygon(Collection<Polygon> in) {
+		for (Polygon c : in) {
+			c.setVisible(false);
+			c.remove();
+		}
+		in.clear();
+	}
+	
 	private void removeCircle(Collection<Circle> in) {
 		for (Circle c : in) {
 			c.setVisible(false);
@@ -570,41 +603,28 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 		}
 	}
 
-	private class DrawSingleCellSignal extends AsyncTask<LatLng, Void, List<CircleOptions>> {
+	private class DrawSingleCellSignal extends AsyncTask<LatLng, Void, Collection<LocationDTO>> {
 
 		@Override
-		protected List<CircleOptions> doInBackground(LatLng... params) {
+		protected Collection<LocationDTO> doInBackground(LatLng... params) {
 			try {
 				List<SignalDTO> ss = SigmetActivity.dataManager.getSignalMeasures(params[0]);
-				List<SignalAVG> clustered = new ArrayList<SignalAVG>();
-				// TODO USE QUAD TREE OR OTHER CLEVER STRUCTURE IN SIGNAL DATA
-				// MANAGER VIT COMBINATION OF CURSOR
+				Map<String,LocationDTO> averages = new HashMap<String,LocationDTO>();
 				while (!ss.isEmpty()) {
 					SignalDTO curr = ss.remove(0);
-					boolean add = true;
-					for (SignalAVG sAvg : clustered) {
-						float[] result = new float[1];
-						Location.distanceBetween(curr.getLatitude(), curr.getLongtitude(), sAvg.getLatitude(), sAvg.getLongtitude(), result);
-						if (SigmetActivity.MIN_DISTANCE > result[0]) {
-							sAvg.addValue(curr.getValue());
-							add = false;
-						}
+					String geohash = curr.getGeohash();
+					geohash = geohash.substring(0,SINGLE_CELL_GEOHASH_PRECIZION);
+					if(averages.containsKey(geohash)){
+						averages.get(geohash).addSignal(curr.getValue());
+					}else{
+						LocationDTO loc = new LocationDTO();
+						loc.setGeohash(geohash);
+						loc.addSignal(curr.getValue());
+						averages.put(geohash, loc);
 					}
-					if (add) {
-						SignalAVG newAvg = new SignalAVG(curr.getLatitude(), curr.getLongtitude());
-						newAvg.addValue(curr.getValue());
-						clustered.add(newAvg);
-					}
-				}
-
-				List<CircleOptions> circles = new ArrayList<CircleOptions>();
-				for (SignalAVG s : clustered) {
-					LatLng l = new LatLng(s.latitude, s.longtitude);
-					int color = getColorBaseOnSignal(s.avg());
-					CircleOptions circleOptions = new CircleOptions().center(l).radius(30).fillColor(color).strokeColor(color);
-					circles.add(circleOptions);
-				}
-				return circles;
+					
+				}				
+				return averages.values();
 			} catch (Exception e) {
 				SigmetLogger.error(e.getMessage());
 			}
@@ -613,45 +633,22 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 		}
 
 		@Override
-		protected void onPostExecute(List<CircleOptions> result) {
-			for (CircleOptions c : result) {
-				Circle circle = getMap().addCircle(c);
-				show_signal.add(circle);
-			}
+		protected void onPostExecute(Collection<LocationDTO> averages) {
+			for (LocationDTO l : averages) {
+				show_signal.add(drawLocation(l));
+			}	
 		}
-
 	};
 
 	private class DrawAllSignal extends AsyncTask<Void, Void, List<WeightedLatLng>> {
 		@Override
 		protected List<WeightedLatLng> doInBackground(Void... params) {
 			try {
-
-				// this will be long loooooooooooong
-				List<SignalDTO> ss = SigmetActivity.dataManager.getAllSignal();
+				List<LocationDTO> ss = SigmetActivity.dataManager.getAllLocations();
 				List<WeightedLatLng> data = new LinkedList<WeightedLatLng>();
-				List<SignalAVG> clustered = new ArrayList<SignalAVG>();
-//				while (!ss.isEmpty()) {
-//					SignalDTO curr = ss.remove(0);
-//					boolean add = true;
-//					for (SignalAVG sAvg : clustered) {
-//						float[] result = new float[1];
-//						Location.distanceBetween(curr.getLatitude(), curr.getLongtitude(), sAvg.getLatitude(), sAvg.getLongtitude(), result);
-//						if (CLUSTERING_DISTANCE > result[0]) {
-//							sAvg.addValue(curr.getValue());
-//							add = false;
-//						}
-//					}
-//					if (add) {
-//						SignalAVG newAvg = new SignalAVG(curr.getLatitude(), curr.getLongtitude());
-//						newAvg.addValue(curr.getValue());
-//						clustered.add(newAvg);
-//					}
-//				}
-
-				for (SignalDTO s : ss) {
-					LatLng ll = new LatLng(s.getLatitude(), s.getLongtitude());
-					data.add(new WeightedLatLng(ll, s.getValue() + MAX_NEGATIVE_DBM));
+				for (LocationDTO s : ss) {
+					LatLng ll = new LatLng(s.getLatitude(), s.getLongitude());
+					data.add(new WeightedLatLng(ll, (s.getAvg() + MAX_NEGATIVE_DBM)));
 				}
 
 				return data;
@@ -662,14 +659,20 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 		}
 
 		@Override
-		protected void onPostExecute(List<WeightedLatLng> result) {
+		protected void onPostExecute(final List<WeightedLatLng> result) {
 			if (result.isEmpty()) {
 				return;
 			}
-			HeatmapTileProvider provider = new HeatmapTileProvider.Builder().weightedData(result).gradient(g).radius(50).build();
-			TileOverlayOptions tO = new TileOverlayOptions().tileProvider(provider);
-			heat_map = getMap().addTileOverlay(tO);
-			M.setEnabled(true);
+			getMapAsync(new OnMapReadyCallback() {
+
+				@Override
+				public void onMapReady(GoogleMap googleMap) {
+					HeatmapTileProvider provider = new HeatmapTileProvider.Builder().weightedData(result).gradient(g).radius(50).opacity(0.5).build();
+					heat_map = googleMap.addTileOverlay(new TileOverlayOptions().tileProvider(provider));
+					M.setEnabled(true);
+
+				}
+			});
 		}
 
 	}
@@ -708,12 +711,6 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 
 	}
 
-	/**
-	 * Helper class for averaging the signal values
-	 * 
-	 * @author Zdenek
-	 * 
-	 */
 	private class SignalAVG {
 		double latitude;
 		double longtitude;
@@ -777,14 +774,14 @@ public class GSMMapFragment extends MapFragment implements SigmetDataListener, C
 		GSMLocationObject.clear();
 		removeCircle(current_signals.values());
 		current_signals.clear();
-		removeCircle(show_signal);
+		removePolygon(show_signal);
 		onCellChange(SigmetActivity.dataManager.getActual());
 		removeHandovers();
 
 	}
 
 	@Override
-	public void onMyLocationChange(Location location) {
+	public void onMyLocationChange(final Location location) {
 		currentLoc = location;
 	}
 

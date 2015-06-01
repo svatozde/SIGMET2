@@ -12,6 +12,7 @@ import com.j256.ormlite.table.TableUtils;
 
 import cz.cvut.sigmet.model.CellDTO;
 import cz.cvut.sigmet.model.HandoverDTO;
+import cz.cvut.sigmet.model.LocationDTO;
 import cz.cvut.sigmet.model.SignalDTO;
 import cz.cvut.sigmet.model.WalkDTO;
 
@@ -23,11 +24,13 @@ public class SigmetSqlHelper extends OrmLiteSqliteOpenHelper  {
 	
 	private RuntimeExceptionDao<CellDTO, Integer> cellDao = null;
 
-	private RuntimeExceptionDao<SignalDTO, Integer> signalDao = null;
+	private RuntimeExceptionDao<SignalDTO, Long> signalDao = null;
 
 	private RuntimeExceptionDao<HandoverDTO, Integer> handoverDao = null;
 	
 	private RuntimeExceptionDao<WalkDTO, Integer> walkDao = null;
+	
+	private RuntimeExceptionDao<LocationDTO, String> locationDao = null;
 	
 	public SigmetSqlHelper(Context context) {
 		super(context, DATABASE_NAME, null, DATABASE_VERSION);
@@ -63,11 +66,12 @@ public class SigmetSqlHelper extends OrmLiteSqliteOpenHelper  {
 	}
 	
 	
-	private void createTables() throws java.sql.SQLException{
+	public void createTables() throws java.sql.SQLException{
+		TableUtils.createTable(connectionSource, LocationDTO.class);
 		TableUtils.createTable(connectionSource, CellDTO.class);
 		TableUtils.createTable(connectionSource, SignalDTO.class);
 		TableUtils.createTable(connectionSource, HandoverDTO.class);
-		TableUtils.createTable(connectionSource,  WalkDTO.class);
+		TableUtils.createTable(connectionSource,  WalkDTO.class);		
 	}
 
 	@Override
@@ -76,7 +80,8 @@ public class SigmetSqlHelper extends OrmLiteSqliteOpenHelper  {
 		cellDao = null;
 		signalDao = null;
 		handoverDao = null;
-		walkDao = null;		
+		walkDao = null;
+		locationDao = null;
 	}
 	
 	@Override
@@ -86,6 +91,7 @@ public class SigmetSqlHelper extends OrmLiteSqliteOpenHelper  {
 		signalDao = null;
 		handoverDao = null;
 		walkDao = null;	
+		locationDao = null;
 	}
 	
 	
@@ -97,7 +103,7 @@ public class SigmetSqlHelper extends OrmLiteSqliteOpenHelper  {
 		return cellDao;
 	}
 	
-	public RuntimeExceptionDao<SignalDTO, Integer> getSignalDao(){
+	public RuntimeExceptionDao<SignalDTO, Long> getSignalDao(){
 		if(signalDao == null){
 			return  getRuntimeExceptionDao(SignalDTO.class);
 		}
@@ -117,6 +123,13 @@ public class SigmetSqlHelper extends OrmLiteSqliteOpenHelper  {
 			walkDao =  getRuntimeExceptionDao(WalkDTO.class);
 		}
 		return walkDao;
+	}
+	
+	public RuntimeExceptionDao<LocationDTO, String> getLocationDao(){
+		if(locationDao == null){
+			locationDao =  getRuntimeExceptionDao(LocationDTO.class);
+		}
+		return locationDao;
 	}
 	
 }

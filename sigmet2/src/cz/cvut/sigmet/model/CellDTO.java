@@ -7,7 +7,7 @@ import com.j256.ormlite.table.DatabaseTable;
 
 @DatabaseTable(tableName = "cells")
 public class CellDTO {
-	@DatabaseField(generatedId = true)
+	@DatabaseField(generatedIdSequence = "cell_id_seq")
 	private int id;
 	@DatabaseField
 	private double latitude;

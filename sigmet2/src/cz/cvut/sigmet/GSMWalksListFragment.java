@@ -62,6 +62,14 @@ public class GSMWalksListFragment extends ListFragment {
 		super.onCreate(savedInstanceState);
 		new GetAllCells().execute((Void) null);
 		setListAdapter(cellAdapter);
+		
+	}
+	
+	@Override
+	public void onResume() {
+		new GetAllCells().execute((Void) null);
+		setListAdapter(cellAdapter);
+		super.onResume();
 	}
 	
 	
@@ -107,8 +115,10 @@ public class GSMWalksListFragment extends ListFragment {
 
 		@Override
 		protected void onPostExecute(List<WalkDTO> result) {
+			cells.clear();
 			cells = result;
-			cellAdapter.addAll(result);
+			cellAdapter.clear();
+			cellAdapter.addAll(cells);
 		}
 	}
 

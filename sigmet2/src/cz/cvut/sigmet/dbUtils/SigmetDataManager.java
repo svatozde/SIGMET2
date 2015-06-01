@@ -19,8 +19,12 @@ import android.telephony.PhoneStateListener;
 import android.telephony.SignalStrength;
 import android.telephony.gsm.GsmCellLocation;
 
+import ch.hsr.geohash.GeoHash;
+
 import com.google.android.gms.maps.model.LatLng;
+import com.j256.ormlite.dao.CloseableIterator;
 import com.j256.ormlite.dao.GenericRawResults;
+import com.j256.ormlite.stmt.DeleteBuilder;
 import com.j256.ormlite.stmt.QueryBuilder;
 import com.j256.ormlite.stmt.UpdateBuilder;
 
@@ -28,6 +32,7 @@ import cz.cvut.sigmet.gsmWebUtils.GsmWebManager;
 import cz.cvut.sigmet.gsmWebUtils.GsmWebManagerImpl;
 import cz.cvut.sigmet.model.CellDTO;
 import cz.cvut.sigmet.model.HandoverDTO;
+import cz.cvut.sigmet.model.LocationDTO;
 import cz.cvut.sigmet.model.SignalDTO;
 import cz.cvut.sigmet.model.WalkDTO;
 
@@ -37,7 +42,10 @@ public class SigmetDataManager extends PhoneStateListener implements LocationLis
 	private final static  String  WALK_START_MESSAGE= "Walk %s started";
 	private final static  String  WALK_STOP_MESSAGE= "Walk %s stopped";
     private static  String DB_MESSAGE = "Connect to c: %s l: %s from DB.";
-	private GsmWebManager webMgr = new GsmWebManagerImpl();
+    
+    private static int MAX_GEOHASH_PRECISION = 128;
+    private static int LOCATION_GEOHASH_PRECISION = 30;
+    private GsmWebManager webMgr = new GsmWebManagerImpl();
 
 	protected Set<SigmetDataListener> listenres = new HashSet<SigmetDataListener>();
 
@@ -55,16 +63,22 @@ public class SigmetDataManager extends PhoneStateListener implements LocationLis
 	}
 
 	public List<CellDTO> getAllCells() throws SQLException {
+		//fillGeohashes();
 		// getInconsistence();
 		QueryBuilder<CellDTO, Integer> qb = helper.getCellDao().queryBuilder();
 		qb.orderBy("addres", true);
 		List<CellDTO> cells = helper.getCellDao().query(qb.prepare());
 		return cells;
 	}
+	
+	public List<LocationDTO> getAllLocations()throws SQLException{
+		QueryBuilder<LocationDTO, String> qb = helper.getLocationDao().queryBuilder();
+		List<LocationDTO> locations = helper.getLocationDao().query(qb.prepare());
+		return locations;
+	}
 
 	public List<SignalDTO> getAllSignal() throws SQLException {
-		QueryBuilder<SignalDTO, Integer> qb = helper.getSignalDao().queryBuilder();
-		qb.where().isNotNull("walk_id");
+		QueryBuilder<SignalDTO, Long> qb = helper.getSignalDao().queryBuilder();
 		List<SignalDTO> signals = helper.getSignalDao().query(qb.prepare());
 		return signals;
 	}
@@ -105,8 +119,24 @@ public class SigmetDataManager extends PhoneStateListener implements LocationLis
 	public SignalDTO addSignalStrength(int strength) throws Exception {
 		if (actual_location != null && helper.getSignalDao() != null) {
 			SignalDTO s = new SignalDTO(actual, actual_location.getLatitude(), actual_location.getLongitude(), strength, System.currentTimeMillis());
+			GeoHash g = GeoHash.withBitPrecision(actual_location.getLatitude(), actual_location.getLongitude(), MAX_GEOHASH_PRECISION);
+			String geohash = g.toBinaryString();
+			s.setGeohash(geohash);
 			s.setWalk(actual_walk);
 			helper.getSignalDao().create(s);
+			LocationDTO l = helper.getLocationDao().queryForId(geohash.substring(0, 29));
+			if(l == null){
+				 l = new LocationDTO(geohash,
+						0, 
+						0,
+						g.getBoundingBoxCenterPoint().getLatitude(),
+						g.getBoundingBoxCenterPoint().getLongitude());
+				 l.addSignal(strength);
+				 helper.getLocationDao().create(l);	
+			}else{
+				l.addSignal(strength);
+				helper.getLocationDao().update(l);
+			}
 			return s;
 		}
 		return null;
@@ -129,7 +159,7 @@ public class SigmetDataManager extends PhoneStateListener implements LocationLis
 			cid.add(c.getId());
 		}
 
-		QueryBuilder<SignalDTO, Integer> qb = helper.getSignalDao().queryBuilder();
+		QueryBuilder<SignalDTO, Long> qb = helper.getSignalDao().queryBuilder();
 		qb.where().in("cell_id", cid);
 		qb.orderBy("timestamp", true);
 		return helper.getSignalDao().query(qb.prepare());
@@ -170,21 +200,20 @@ public class SigmetDataManager extends PhoneStateListener implements LocationLis
 	}
 	
 	public List<SignalDTO> getSignalsForWalk(WalkDTO walk) throws Exception {
-		QueryBuilder<SignalDTO, Integer> qb = helper.getSignalDao().queryBuilder();
+		QueryBuilder<SignalDTO, Long> qb = helper.getSignalDao().queryBuilder();
 		qb.where().eq("walk_id", walk.getId());
 		return helper.getSignalDao().query(qb.prepare());
 	}
 
 	@Override
 	public void onLocationChanged(Location location) {
-		actual_location = location;
-		SignalDTO s;
+		actual_location = location;	
 		if (actual_signalStrength == null) {
 			return;
 		}
 
 		try {
-			s = addSignalStrength(getSignalByReflection(actual_signalStrength));
+			SignalDTO s = addSignalStrength(getSignalByReflection(actual_signalStrength));
 			if (s != null) {
 				for (SigmetDataListener l : listenres) {
 					l.onLocationCange(s);
@@ -224,6 +253,7 @@ public class SigmetDataManager extends PhoneStateListener implements LocationLis
 
 	public List<WalkDTO> getAllWalks() throws SQLException {
 		QueryBuilder<WalkDTO, Integer> qb = helper.getWalkDao().queryBuilder();
+		qb.where().isNotNull("stop");
 		qb.orderBy("start", true);
 		List<WalkDTO> walks = helper.getWalkDao().query(qb.prepare());
 		return walks;
@@ -246,6 +276,59 @@ public class SigmetDataManager extends PhoneStateListener implements LocationLis
 		GenericRawResults<String[]> qb5 = helper.getCellDao().queryRaw("select max(value) from signal");
 		System.out.println(qb5);
 	}
+	
+//	public void checkGehohashes(){
+//		QueryBuilder<SignalDTO, Integer> qb = helper.getSignalDao().queryBuilder();
+//		qb.where().isNull(columnName)
+//		List<SignalDTO> signals = helper.getSignalDao().query(qb.prepare());
+//	}
+	
+	public void fillGeohashes() throws SQLException{
+		//helper.getLocationDao().executeRaw("ALTER TABLE `signal` ADD COLUMN geohash VARCHAR;");
+		
+//		Cursor dbCursor = helper.getReadableDatabase().query("signal", null, null, null, null, null, null);
+//		String[] columnNames = dbCursor.getColumnNames();
+//		System.out.println(columnNames);
+		
+		DeleteBuilder<LocationDTO, String> db = helper.getLocationDao().deleteBuilder();
+		db.delete();
+		List<LocationDTO> locations = getAllLocations();
+		System.out.println(locations);
+		
+		List<SignalDTO> ss = getAllSignal();
+		for(SignalDTO s : ss){
+			GeoHash g = GeoHash.withBitPrecision( s.getLatitude(),  s.getLongtitude(),MAX_GEOHASH_PRECISION);
+			String geohash = g.toBinaryString();
+			
+			String locGeohash = geohash.substring(0,LOCATION_GEOHASH_PRECISION);
+			LocationDTO location = helper.getLocationDao().queryForId(locGeohash);
+			
+			if(location==null){
+				GeoHash gl = GeoHash.fromBinaryString(locGeohash);
+				LocationDTO newLoc = new LocationDTO(locGeohash,
+													0, 
+													0,
+													gl.getBoundingBoxCenterPoint().getLatitude(),
+													gl.getBoundingBoxCenterPoint().getLongitude());
+				newLoc.addSignal(s.getValue());
+				helper.getLocationDao().create(newLoc);		
+			}else{
+				location.addSignal(s.getValue());
+				helper.getLocationDao().update(location);
+			}
+			
+			UpdateBuilder<SignalDTO, Long> ub = helper.getSignalDao().updateBuilder();
+			ub.where().eq("timestamp", s.getTimestamp());
+			ub.updateColumnValue("geohash", geohash);
+			ub.update();		
+		}
+		ss.size();
+	}
+	
+	public LocationDTO getLocationByHash(String hash){
+		return null;
+	}
+	
 
 	public void startWalk(String name) throws SQLException {
 		WalkDTO dto = new WalkDTO();
@@ -267,7 +350,7 @@ public class SigmetDataManager extends PhoneStateListener implements LocationLis
 	}
 	
 	public void deleteWalk(WalkDTO walk) throws SQLException{
-		UpdateBuilder<SignalDTO, Integer> sUpdate = helper.getSignalDao().updateBuilder();
+		UpdateBuilder<SignalDTO, Long> sUpdate = helper.getSignalDao().updateBuilder();
 		sUpdate.where().eq("walk_id", walk);
 		sUpdate.updateColumnValue("walk_id", null);
 		sUpdate.update();
